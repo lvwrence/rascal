@@ -1,20 +1,30 @@
 module Bencode
     (
         Bencode(BInt, BString, BList, BDict),
-        bParse
+        bParse,
+        bUnparse
     ) where
 
 -- library that supports parsing bencode
 import Text.ParserCombinators.Parsec
-import Data.Map
+import Data.List
+import qualified Data.Map as Map
 
 -- TO DO: figure out why it won't work with latin1 encodings.
 
 data Bencode = BInt Integer
              | BString String
              | BList [Bencode]
-             | BDict (Map String Bencode)
+             | BDict (Map.Map String Bencode)
              deriving (Show, Eq)
+
+bUnparse :: Bencode -> String
+bUnparse (BInt int) = "i" ++ show int ++ "e"
+bUnparse (BString str) = show (length str) ++ ":" ++ str
+bUnparse (BList lst) = "i" ++ foldl' (++) "" (map bUnparse lst) ++ "e"
+bUnparse (BDict dict) = "d" ++ foldl' (\current x ->
+                                        current ++ bUnparse (BString (fst x)) ++ bUnparse (snd x)) "" (Map.toList dict)
+                        ++ "e"
 
 bParse :: String -> Maybe Bencode
 bParse str = case parse bParseAny "" str of
@@ -52,15 +62,9 @@ bParserDict :: Parser Bencode
 bParserDict = do char 'd'
                  xs <- many bParserDictContents
                  char 'e'
-                 return (BDict (fromList xs))
+                 return (BDict (Map.fromList xs))
 
 bParserDictContents :: Parser (String, Bencode)
 bParserDictContents = do (BString key) <- bParserStr
                          val <- bParseAny
                          return (key, val)
-
---main :: IO ()
---main =
-    --getArgs >>= \args ->
-    --readFile (head args) >>= \contents ->
-    --putStrLn (show (fromJust (bParse contents)))
