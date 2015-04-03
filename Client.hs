@@ -1,3 +1,4 @@
+import System.IO
 import System.Environment (getArgs)
 import Network.HTTP
 import Data.Maybe
@@ -8,7 +9,9 @@ import Bencode
 main :: IO ()
 main =
     getArgs >>= \args ->
-    readFile (head args) >>= \contents ->
+    openFile (head args) ReadMode >>= \handle ->
+    hSetEncoding handle latin1 >>
+    hGetContents handle >>= \contents ->
     requestTracker (fromJust (bParse contents)) >>= \resp ->
     putStrLn resp
 
