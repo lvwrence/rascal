@@ -5,6 +5,9 @@ import Data.Maybe
 import Data.List.Utils
 import Data.Map
 import Bencode
+import qualified Data.ByteString.Char8 as B
+import qualified Crypto.Hash.SHA1 as SHA1
+import qualified Data.ByteString.Base16 as HexEncode
 
 main :: IO ()
 main =
@@ -50,8 +53,16 @@ addKeyValuePairToRequest key value url = url ++ if endswith "?" url
                                                 then key ++ "=" ++ value
                                                 else "&" ++ key ++ "=" ++ value
 
+-- helper function for infoHash: inserts y every n elements of xs.
+insertEvery :: Eq a => Int -> a -> [a] -> [a]
+insertEvery n y xs = countdown n xs where
+    countdown _ [] = [] -- base case
+    countdown m (x:xs) | m == n = y:countdown (n-1) (x:xs)
+                       | m == 0 = x:countdown n xs
+                       | otherwise = x:countdown (m-1) xs
+
 infoHash :: Bencode -> String
-infoHash _ = "test"
+infoHash (BDict b) = insertEvery 2 '%' (read (show (HexEncode.encode (SHA1.hash (B.pack (bUnparse (b ! "info")))))))
 peerId :: String
 peerId = "aaaaabbbbbcccccdddddd"
 listeningPort :: String
